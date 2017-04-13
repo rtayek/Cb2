@@ -29,7 +29,7 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
-//version='alpha1'
+version='alpha1'
 task printx() << {
     println project
     println project.name
@@ -52,7 +52,7 @@ task deliver(dependsOn: ':app:assemble') << {
             execute 'pwd'
             execute 'ls -l html/conrad/'
             put from: 'app/build/outputs/apk/app-debug.apk', into: "$basename-app-debug.apk"
-            put from: 'app/build/outputs/apk/app-debug-unaligned.apk', into: "$basename-app-debug-unaligned.apk"
+            //put from: 'app/build/outputs/apk/app-debug-unaligned.apk', into: "$basename-app-debug-unaligned.apk"
             put from: 'app/build/outputs/apk/app-release-unsigned.apk', into: "$basename-app-release-unsigned.apk"
             execute 'ls -l html/conrad/'
         }

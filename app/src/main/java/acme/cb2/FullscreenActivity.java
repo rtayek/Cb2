@@ -30,7 +30,6 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
             @Override
             public void accept(Audio.Sound sound) {
                 Integer id=id(sound);
-                main.l.info("playing sound: "+sound+", id: "+id);
                 if(id!=null) {
                     mediaPlayer=MediaPlayer.create(FullscreenActivity.this,id);
                     mediaPlayer.start();
@@ -148,14 +147,10 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
     }
     @Override
     public void onClick(final View v) {
-        p("click on: "+v);
         new Thread(new Runnable() {
             @Override
             public void run() {
-                p("enter run() for click on: "+v);
-                Et et=new Et();
                 main.instance().click(v.getId());
-                p("exit run() for click on: "+v+" after: "+et);
             }
         },"click #"+clicks++).start();
     }
@@ -164,7 +159,6 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
         p(observable+" "+hint);
         if(observable instanceof Model) {
             if(observable==main.model) {
-                p("received update from observable"+observable+" with hint: "+hint);
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -175,9 +169,9 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
                     }
                 });
             } else
-                p(observable+" is not our model!");
+                main.l.severe(observable+" is not our model!");
         } else
-            p(observable+" is not a model!");
+            main.l.severe(observable+" is not a model!");
     }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -251,27 +245,12 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
         p("font size: "+fontSize);
         Point point=new Point();
         getWindowManager().getDefaultDisplay().getRealSize(point);
-        p("real size is: "+point);
+        p("real window size is: "+point);
         width=point.x;
         depth=point.y;
         View view=createButtons();
         setContentView(view);
         main.model.addObserver(this);
-        if(false) {
-            view=mContentView;
-            p("view is: "+view);
-            p("view is: "+view.getWidth()+'x'+view.getHeight());
-            p("view is: "+view.getClipBounds());
-            Button button=new Button(this);
-            button.setText("foo");
-            int size=100;
-            LinearLayout.LayoutParams layoutParams=new LinearLayout.LayoutParams(size,size);
-            //layoutParams.leftMargin=(int)(x0+i%columns*1.2*size);
-            //layoutParams.topMargin=(int)(y0+i/columns*size*1.2);
-            //p("button: "+i+", left margin="+params.leftMargin+", top margin="+params.topMargin);
-            button.setLayoutParams(layoutParams);
-            ((LinearLayout)view).addView(button);
-        }
     }
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {

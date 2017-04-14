@@ -38,7 +38,6 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
             }
             Integer id(Audio.Sound sound) {
                 switch(sound) {
-
                     case electronic_chime_kevangc_495939803:
                         return R.raw.electronic_chime_kevangc_495939803;
                     case glass_ping_go445_1207030150:
@@ -51,6 +50,67 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
                 }
             }
         });
+    }
+    boolean menuItem(MenuItem item) {
+        try {
+            main.l.info("item: "+item);
+            int id=item.getItemId();
+            if(Enums.MenuItem.isItem(id))
+                if(Enums.MenuItem.item(id).equals(Enums.MenuItem.Quit)) {
+                    main.l.warning("quitting.");
+                    //areWeQuitting=true;
+                } else {
+                    if(Enums.MenuItem.values()[id].equals(Enums.MenuItem.toggleExtraStatus))
+                        ; //setStatusVisibility(status[0].getVisibility()==View.VISIBLE?View.INVISIBLE:View.VISIBLE);
+                    else
+                        Enums.MenuItem.doItem(id,main);
+                    return true;
+                }
+            else if(Enums.LevelSubMenuItem.isItem(id-Enums.MenuItem.values().length)) {
+                Enums.LevelSubMenuItem.doItem(id-Enums.MenuItem.values().length); // hack!
+                return true;
+            } else
+                main.l.severe(item+" is not a tablet meun item!");
+        } catch(Exception e) {
+            main.l.severe("menut item: "+item+", caught: "+e);
+        }
+        return false;
+        /*
+        else if(id==Enums.MenuItem.values().length) { // some hack for restarting tablet?
+            // wtf was i doing here?
+            Intent i=mainActivity.getBaseContext().getPackageManager().getLaunchIntentForPackage(mainActivity.getBaseContext().getPackageName());
+            i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            mainActivity.startActivity(i);
+        }
+        */
+    }
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        main.l.info("on create options menu");
+        super.onCreateOptionsMenu(menu);
+        for(Enums.MenuItem menuItem : Enums.MenuItem.values())
+            if(menuItem!=Enums.MenuItem.Level)
+                menu.add(Menu.NONE,menuItem.ordinal(),Menu.NONE,menuItem.name());
+        menu.add(Menu.NONE,Enums.MenuItem.values().length,Menu.NONE,"Restart");
+        SubMenu subMenu=menu.addSubMenu(Menu.NONE,99,Menu.NONE,"Level");
+        for(Enums.LevelSubMenuItem levelSubMenuItem : Enums.LevelSubMenuItem.values())
+            subMenu.add(Menu.NONE,Enums.MenuItem.values().length+levelSubMenuItem.ordinal()/*hack!*/,Menu.NONE,levelSubMenuItem.name());
+        return true;
+    }
+    @Override
+    public void onOptionsMenuClosed(Menu menu) {
+        main.l.info("in options menu closed");
+        super.onOptionsMenuClosed(menu);
+        main.l.info("after super on options menu closed");
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        boolean rc=menuItem(item);
+        if(!rc) {
+            main.l.info("calling super on otions item selected");
+            rc=super.onOptionsItemSelected(item);
+        }
+        return rc;
     }
     private Button getButton(int size,String string,float fontsize,int rows,int columns,int i,int x,int y) {
         return getButton(size,size,string,fontsize,rows,columns,i,x,y);
@@ -73,7 +133,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
         return button;
     }
     View createButtons() {
-        final int rows=colors.rows,columns=colors.columns,n=colors.n;
+        final int rows=colors.rows, columns=colors.columns, n=colors.n;
         RelativeLayout relativeLayout=new RelativeLayout(this);
         RelativeLayout.LayoutParams params=null;
         buttons=new Button[n+/*for ip address*/1]; // colors is intimatley tied to the mark 1 model!
@@ -114,6 +174,8 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
         }
         i++;
         { // extra buton for inet address
+            specialButtonIndex=i;
+            p("special button index: "+specialButtonIndex);
             Button button=new Button(this);
             button.setId(i+1);
             button.setTextSize((int)Math.round(fontSize/4.));
@@ -126,7 +188,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
             if(i/columns%2==0)
                 button.setText(""+(char)('0'+(i+1)));
             button.setBackgroundColor(colors.aColor(i,false));
-            //button.setOnClickListener(this);
+            button.setOnClickListener(this);
             buttons[i]=button;
             relativeLayout.addView(button);
             Timer timer=new Timer();
@@ -147,14 +209,25 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
     }
     @Override
     public void onClick(final View v) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                main.instance().click(v.getId());
-            }
-        },"click #"+clicks++).start();
+        Integer index=v.getId()-1;
+        p("click on: "+index);
+        Integer id=index+1;
+        p("id: "+id);
+        if(1<=id&&id<=main.model.buttons) {
+            p("it's a model button.");
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    main.instance().click(v.getId());
+                }
+            },"click #"+clicks++).start();
+        } else if(index.equals(specialButtonIndex)) {
+            p("we clicked on on the special button.");
+            openOptionsMenu();
+        } else {
+            p("strange button index: "+index);
+        }
     }
-    @Override
     public void update(Observable observable,Object hint) {
         p(observable+" "+hint);
         if(observable instanceof Model) {
@@ -198,16 +271,6 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_fullscreen);
-        mVisible=true;
-        mControlsView=findViewById(R.id.fullscreen_content_controls);
-        mContentView=findViewById(R.id.fullscreen_content);
-        mContentView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                toggle();
-            }
-        });
-        findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
         try {
             Enumeration<NetworkInterface> netowrkInterfaces=NetworkInterface.getNetworkInterfaces();
             for(NetworkInterface networkInterface : Collections.list(netowrkInterfaces))
@@ -220,22 +283,14 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
         //int first=101, tabletsInGroup=32;
         int first=100, tabletsInGroup=20; // make compatible with old static ip addresses
         Main.Group group=new Group(first,first+tabletsInGroup-1,false);
-        /*
-        Logger global=Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
-        LoggingHandler.init();
-        LoggingHandler.setLevel(Level.WARNING);
-        File logFileDirectory=getFilesDir();
-        LoggingHandler.addFileHandler(l,logFileDirectory,"tablet");
-        pl("android id: "+androidId);
-        //LoggingHandler.toggleSockethandlers(); // looks like i need to wait for this?
-        // yes, whould wait until wifi is up
-        */
         main=new Main(properties,logger,group,Model.mark1);
-        // sublcass and override loop adding call to try to connect wifi
         setupAudio();
         main.sleep=20_000;
         mainThread=new Thread(main,"rabbit2 main");
         mainThread.start();
+        Point point=new Point();
+        getWindowManager().getDefaultDisplay().getRealSize(point);
+        p("real window size is: "+point);
         DisplayMetrics metrics=new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
         System.out.println(metrics);
@@ -243,54 +298,11 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
         p("size: "+size);
         fontSize=(int)Math.round(metrics.heightPixels*.06);
         p("font size: "+fontSize);
-        Point point=new Point();
-        getWindowManager().getDefaultDisplay().getRealSize(point);
-        p("real window size is: "+point);
         width=point.x;
         depth=point.y;
         View view=createButtons();
         setContentView(view);
         main.model.addObserver(this);
-    }
-    @Override
-    protected void onPostCreate(Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-        // Trigger the initial hide() shortly after the activity has been
-        // created, to briefly hint to the user that UI controls
-        // are available.
-        delayedHide(100);
-    }
-    private void toggle() {
-        if(mVisible) {
-            hide();
-        } else {
-            show();
-        }
-    }
-    private void hide() {
-        // Hide UI first
-        ActionBar actionBar=getSupportActionBar();
-        if(actionBar!=null) {
-            actionBar.hide();
-        }
-        mControlsView.setVisibility(View.GONE);
-        mVisible=false;
-        // Schedule a runnable to remove the status and navigation bar after a delay
-        mHideHandler.removeCallbacks(mShowPart2Runnable);
-        mHideHandler.postDelayed(mHidePart2Runnable,UI_ANIMATION_DELAY);
-    }
-    @SuppressLint("InlinedApi")
-    private void show() {
-        // Show the system bar
-        mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
-        mVisible=true;
-        // Schedule a runnable to display UI elements after a delay
-        mHideHandler.removeCallbacks(mHidePart2Runnable);
-        mHideHandler.postDelayed(mShowPart2Runnable,UI_ANIMATION_DELAY);
-    }
-    private void delayedHide(int delayMillis) {
-        mHideHandler.removeCallbacks(mHideRunnable);
-        mHideHandler.postDelayed(mHideRunnable,delayMillis);
     }
     MediaPlayer mediaPlayer;
     Main main;
@@ -300,44 +312,6 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
     float fontSize;
     final Colors colors=new Colors();
     Button[] buttons;
+    Integer specialButtonIndex=null;
     //boolean[] states;
-    private static final boolean AUTO_HIDE=true;
-    private static final int AUTO_HIDE_DELAY_MILLIS=3000;
-    private static final int UI_ANIMATION_DELAY=300;
-    private final Handler mHideHandler=new Handler();
-    private View mContentView;
-    private final Runnable mHidePart2Runnable=new Runnable() {
-        @SuppressLint("InlinedApi")
-        @Override
-        public void run() {
-            mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE|View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
-        }
-    };
-    private View mControlsView;
-    private final Runnable mShowPart2Runnable=new Runnable() {
-        @Override
-        public void run() {
-            ActionBar actionBar=getSupportActionBar();
-            if(actionBar!=null) {
-                actionBar.show();
-            }
-            mControlsView.setVisibility(View.VISIBLE);
-        }
-    };
-    private boolean mVisible;
-    private final Runnable mHideRunnable=new Runnable() {
-        @Override
-        public void run() {
-            hide();
-        }
-    };
-    private final View.OnTouchListener mDelayHideTouchListener=new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view,MotionEvent motionEvent) {
-            if(AUTO_HIDE) {
-                delayedHide(AUTO_HIDE_DELAY_MILLIS);
-            }
-            return false;
-        }
-    };
 }

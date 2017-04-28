@@ -1,13 +1,16 @@
 package acme.cb2;
 import android.annotation.SuppressLint;
+import android.app.*;
+import android.app.AlertDialog;
+import android.content.*;
 import android.content.pm.*;
 import android.graphics.*;
 import android.media.*;
 import android.provider.*;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.*;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.v7.app.ActionBar;
 import android.util.*;
 import android.view.*;
 import android.widget.*;
@@ -21,7 +24,7 @@ import p.*;
 import p.Main.*;
 import q.Colors;
 
-import static java.lang.Math.min;
+import static java.lang.Math.*;
 import static p.Main.*;
 import static p.IO.*;
 public class FullscreenActivity extends AppCompatActivity implements View.OnClickListener, Observer {
@@ -34,7 +37,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
                     mediaPlayer=MediaPlayer.create(FullscreenActivity.this,id);
                     mediaPlayer.start();
                 } else
-                    main.l.warning("id for sound: "+sound+" is null!");
+                    l.warning("id for sound: "+sound+" is null!");
             }
             Integer id(Audio.Sound sound) {
                 switch(sound) {
@@ -45,7 +48,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
                     case store_door_chime_mike_koenig_570742973:
                         return R.raw.store_door_chime_mike_koenig_570742973;
                     default:
-                        main.l.warning(""+" "+"default where!");
+                        l.warning(""+" "+"default sound!");
                         return null;
                 }
             }
@@ -53,15 +56,15 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
     }
     boolean menuItem(MenuItem item) {
         try {
-            main.l.info("item: "+item);
+            l.info("item: "+item);
             int id=item.getItemId();
             if(Enums.MenuItem.isItem(id))
                 if(Enums.MenuItem.item(id).equals(Enums.MenuItem.Quit)) {
-                    main.l.warning("quitting.");
+                    l.warning("quitting.");
                     //areWeQuitting=true;
                 } else {
-                    if(Enums.MenuItem.values()[id].equals(Enums.MenuItem.toggleExtraStatus))
-                        ; //setStatusVisibility(status[0].getVisibility()==View.VISIBLE?View.INVISIBLE:View.VISIBLE);
+                    if(Enums.MenuItem.values()[id].equals(Enums.MenuItem.Statistics))
+                       alert("Statistics",main.statistics(),true);
                     else
                         Enums.MenuItem.doItem(id,main);
                     return true;
@@ -70,9 +73,9 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
                 Enums.LevelSubMenuItem.doItem(id-Enums.MenuItem.values().length); // hack!
                 return true;
             } else
-                main.l.severe(item+" is not a tablet meun item!");
+                l.severe(item+" is not a tablet meun item!");
         } catch(Exception e) {
-            main.l.severe("menut item: "+item+", caught: "+e);
+            l.severe("menut item: "+item+", caught: "+e);
         }
         return false;
         /*
@@ -86,7 +89,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        main.l.info("on create options menu");
+        l.info("on create options menu");
         super.onCreateOptionsMenu(menu);
         for(Enums.MenuItem menuItem : Enums.MenuItem.values())
             if(menuItem!=Enums.MenuItem.Level)
@@ -99,18 +102,33 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
     }
     @Override
     public void onOptionsMenuClosed(Menu menu) {
-        main.l.info("in options menu closed");
+        l.info("in options menu closed");
         super.onOptionsMenuClosed(menu);
-        main.l.info("after super on options menu closed");
+        l.info("after super on options menu closed");
     }
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         boolean rc=menuItem(item);
         if(!rc) {
-            main.l.info("calling super on otions item selected");
+            l.info("calling super on otions item selected");
             rc=super.onOptionsItemSelected(item);
         }
         return rc;
+    }
+    void alert(String title,String string,boolean cancelable) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(title);
+        builder.setMessage(string);
+        builder.setCancelable(cancelable);
+        builder.setPositiveButton("Ok",new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog,int whichButton) {
+                //Your action here
+            }
+        });
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+        int w=(int)round(width*.9),h=(int)round(depth*.9);
+        alertDialog.getWindow().setLayout(w,h);
     }
     private Button getButton(int size,String string,float fontsize,int rows,int columns,int i,int x,int y) {
         return getButton(size,size,string,fontsize,rows,columns,i,x,y);
@@ -178,7 +196,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
             p("special button index: "+specialButtonIndex);
             Button button=new Button(this);
             button.setId(i+1);
-            button.setTextSize((int)Math.round(fontSize/4.));
+            button.setTextSize((int)round(fontSize/4.));
             button.setGravity(Gravity.CENTER);
             params=new RelativeLayout.LayoutParams(size,size);
             params.leftMargin=(int)(x0+i%columns*1.2*size);
@@ -223,7 +241,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
             },"click #"+clicks++).start();
         } else if(index.equals(specialButtonIndex)) {
             p("we clicked on on the special button.");
-            openOptionsMenu();
+            //openOptionsMenu(); // we have menu button now
         } else {
             p("strange button index: "+index);
         }
@@ -242,23 +260,25 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
                     }
                 });
             } else
-                main.l.severe(observable+" is not our model!");
+                l.severe(observable+" is not our model!");
         } else
-            main.l.severe(observable+" is not a model!");
+            l.severe(observable+" is not a model!");
     }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // nexus 5 wants to be in ptp mode
         p("on create thread: "+Thread.currentThread().getName());
+        printThreads();
+        l.setLevel(Level.ALL);
+        l.config("on create thread: "+Thread.currentThread().getName());
+        // nexus 5 wants to be in ptp mode - swipe down to get to option
         String androidId=Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
-        p("androidId: "+androidId);
-        Properties properties=properties(new File(getExternalFilesDir(null),propertiesFilename));
-        p("properties: "+properties);
-        Logger logger=Logger.getLogger("xyzzy");
-        logger.setLevel(Level.ALL);
         File logFileDirectory=new File(getExternalFilesDir(null),IO.logFileDirectory);
-        addFileHandler(logger,logFileDirectory,androidId);
+        addFileHandler(l,logFileDirectory,androidId);
+        p("androidId: "+androidId);
+        Main.propertiesFilename=new File(getExternalFilesDir(null),propertiesFilename).getPath();
+        Properties properties=properties(new File(Main.propertiesFilename));
+        p("properties: "+properties);
         try {
             String captivePortalDetectionEnabled="captive_portal_detection_enabled";
             int result=Settings.Global.getInt(getContentResolver(),captivePortalDetectionEnabled);
@@ -277,14 +297,14 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
                 p("interface: "+networkInterface.getName()+" "+networkInterface.getInterfaceAddresses());
         } catch(SocketException e) {
             p("getNetworkInterfaces() caught: "+e);
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        //int first=101, tabletsInGroup=32;
-        int first=100, tabletsInGroup=20; // make compatible with old static ip addresses
-        Main.Group group=new Group(first,first+tabletsInGroup-1,false);
-        main=new Main(properties,logger,group,Model.mark1);
+        Integer first=new Integer(properties.getProperty("first"));
+        Integer last=new Integer(properties.getProperty("last"));
+        Group group=new Group(first,last,false);
+        main=new Main(properties,group,Model.mark1);
         setupAudio();
+        Audio.audio.play(Audio.Sound.store_door_chime_mike_koenig_570742973);
         main.sleep=20_000;
         mainThread=new Thread(main,"rabbit2 main");
         mainThread.start();
@@ -294,9 +314,9 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
         DisplayMetrics metrics=new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
         System.out.println(metrics);
-        size=(int)Math.round(metrics.heightPixels*.25); // size of a large square button
+        size=(int)round(metrics.heightPixels*.25); // size of a large square button
         p("size: "+size);
-        fontSize=(int)Math.round(metrics.heightPixels*.06);
+        fontSize=(int)round(metrics.heightPixels*.06);
         p("font size: "+fontSize);
         width=point.x;
         depth=point.y;
@@ -304,7 +324,49 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
         setContentView(view);
         main.model.addObserver(this);
     }
-    MediaPlayer mediaPlayer;
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        //savedInstanceState.putDouble(savedStateKey,et.etms());
+        super.onSaveInstanceState(savedInstanceState);
+    }
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        //savedState=savedInstanceState.getDouble(savedStateKey);
+    }
+    @Override
+    public void onPause() {
+        l.config("paused");
+        super.onPause();  // Always call the superclass method first
+    }
+    @Override
+    public void onResume() {
+        l.config("resumed");
+        super.onResume();  // Always call the superclass method first
+    }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        l.config("started");
+    }
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        l.config("restarted");
+    }
+    @Override
+    protected void onStop() {
+        super.onStop();
+        l.config("stopped");
+    }
+    @Override
+    protected void onDestroy() {
+        l.config("destroyed");
+        closeOptionsMenu();
+       // stopTabletStuff();
+        super.onDestroy();
+        //System.runFinalizersOnExit(true);
+        //System.exit(0);
+    }    MediaPlayer mediaPlayer;
     Main main;
     Thread mainThread;
     int clicks;

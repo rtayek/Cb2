@@ -267,10 +267,11 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnClic
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        p("###################################################################################################");
         p("on create thread: "+Thread.currentThread().getName());
         printThreads();
-        l.setLevel(Level.ALL);
-        l.config("on create thread: "+Thread.currentThread().getName());
+        logging();
+        p("rounters we can ping: "+routersWeCanPing());
         // nexus 5 wants to be in ptp mode - swipe down to get to option
         String androidId=Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
         File logFileDirectory=new File(getExternalFilesDir(null),IO.logFileDirectory);

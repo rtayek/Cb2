@@ -2,7 +2,9 @@ package acme.cb2;
 import android.content.*;
 import android.net.wifi.*;
 
+import java.math.*;
 import java.net.*;
+import java.nio.*;
 import java.util.*;
 
 import static p.IO.*;
@@ -29,10 +31,10 @@ for( WifiConfiguration i : list ) {
      */
     @Override
     public void onReceive(Context context,Intent intent) {
+        l.info("wifi receiver got action: "+intent.getAction());
         if(!isEnabled)
             return;
         mContext=context;
-        p("wifi receiver got action: "+intent.getAction());
         WifiManager wifiManager=(WifiManager)context.getSystemService(Context.WIFI_SERVICE);
         if(!isChecking) {
             isChecking=true;
@@ -40,6 +42,56 @@ for( WifiConfiguration i : list ) {
             isChecking=false;
         }
         // or put it on a guard.
+    }
+    static void list(WifiManager wifiManager) {
+        List<WifiConfiguration> wifiConfigurations=wifiManager.getConfiguredNetworks();
+        for(WifiConfiguration wifiConfiguration : wifiConfigurations) {
+            p("configured: "+wifiConfiguration.SSID+", status: "+wifiConfiguration.status+": "+WifiConfiguration.Status.strings[wifiConfiguration.status]+", networkId: "+wifiConfiguration.networkId);
+        }
+    }
+    static WifiConfiguration findCurrent(WifiManager wifiManager) {
+        List<WifiConfiguration> wifiConfigurations=wifiManager.getConfiguredNetworks();
+        for(WifiConfiguration wifiConfiguration : wifiConfigurations)
+            if(wifiConfiguration.status==WifiConfiguration.Status.CURRENT)
+                return wifiConfiguration;
+        return null;
+    }
+    static InetAddress getIpAddressFromWifiManager(WifiManager wifiManager) {
+        p("isWifiEnabled() returns: "+wifiManager.isWifiEnabled());
+        WifiInfo wifiInf=wifiManager.getConnectionInfo();
+        p("wifi info: "+wifiInf);
+        int ipAddress=wifiInf.getIpAddress();
+        String ipAddressString=null;
+        if(ipAddress!=0) {
+            // if(ipAddress.isL)
+            p("wifi ip address string: "+ipAddress);
+            if(ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN))
+                ipAddress=Integer.reverseBytes(ipAddress);
+            p("ipAddress string: "+Integer.toHexString(ipAddress));
+            byte[] ipByteArray=BigInteger.valueOf(ipAddress).toByteArray();
+            try {
+                ipAddressString=InetAddress.getByAddress(ipByteArray).getHostAddress();
+            } catch(UnknownHostException ex) {
+                l.warning("Unable to get host address for: "+Integer.toHexString(ipAddress));
+            }
+        }
+        InetAddress inetAddress=null;
+        try {
+            inetAddress=InetAddress.getByName(ipAddressString);
+        } catch(UnknownHostException e) {
+        }
+        return inetAddress;
+    }
+    static WifiConfiguration findMyWifiConfiguration(WifiManager wifiManager,String ssid) {
+        if(!wifiManager.isWifiEnabled())
+            return null;
+        if(ssid.equals(""))
+            return null;
+        List<WifiConfiguration> list=wifiManager.getConfiguredNetworks();
+        for(WifiConfiguration wifiConfiguration:list)
+            if(wifiConfiguration.SSID.equals(ssid))
+                return wifiConfiguration;
+        return null;
     }
     void tryToConnectToWifi(WifiManager wifiManager) {
         final String tabletWifiSsid="\"tablets\"";
@@ -100,5 +152,4 @@ for( WifiConfiguration i : list ) {
     private Context mContext;
     boolean isEnabled=false;
     boolean isChecking;
-
 }
